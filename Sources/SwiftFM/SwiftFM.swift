@@ -1212,8 +1212,6 @@ open class SwiftFM {
     
     open class func getRecordsUnsorted(layout: String,
                                limit: Int,
-                               sortField: String,
-                               ascending: Bool,
                                portal: String?,
                                token: String) async throws -> (Data, FMResult.DataInfo) {
         
