@@ -357,6 +357,7 @@ open class SwiftFM {
     /// - Note: Use `JSONDecoder` to process the record data (`Data, _`). Create a Codable model struct that includes your entity's `fieldData`. Or use `JSONSerialization` to decode the objects manually.
     ///
     /// `DataInfo` properties can be accessed immediately, as in `print(info.foundCount)`.
+    /// 	We need to do some testing here and perhaps make a revision.
     
     open class func getRecords(layout: String,
                                limit: Int,
