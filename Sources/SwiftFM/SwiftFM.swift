@@ -1195,6 +1195,85 @@ open class SwiftFM {
     
     
     
+    // MARK: - get records unsorted -> ([record], .dataInfo)
+    
+    /// Fetches a range of records without a sort order
+    ///
+    /// - Parameters:
+    ///   - layout: Layout to query
+    ///   - limit: Constrains the number of records fetched
+    ///   - portal: Optional portal name (or object name) on `layout`
+    ///   - token: Data API session token
+    ///
+    /// - Returns: A record array (`Data`) and metadata (`DataInfo`) about the request
+    /// - Note: Use `JSONDecoder` to process the record data (`Data, _`). Create a Codable model struct that includes your entity's `fieldData`. Or use `JSONSerialization` to decode the objects manually.
+    ///
+    /// `DataInfo` properties can be accessed immediately, as in `print(info.foundCount)`.
+    
+    open class func getRecordsUnsorted(layout: String,
+                               limit: Int,
+                               sortField: String,
+                               ascending: Bool,
+                               portal: String?,
+                               token: String) async throws -> (Data, FMResult.DataInfo) {
+        
+        // params
+        
+        var portalJson = "[]"  // nil portal
+        
+        if let portal {  // else
+            portalJson = """
+            ["\(portal)"]
+            """
+        }
+                
+        
+        // encoding
+        guard
+                let portalEnc = portalJson.urlEncoded,
+                let host      = UserDefaults.standard.string(forKey: "fm-host"),
+                let db        = UserDefaults.standard.string(forKey: "fm-db"),
+                let url       = URL(string: "https://\(host)/fmi/data/vLatest/databases/\(db)/layouts/\(layout)/records/?_limit=\(limit)&portal=\(portalEnc)")
+        
+        else { throw FMError.urlEncoding }
+        
+        
+        // request
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        guard   let (data, _) = try? await URLSession.shared.data(for: request),
+                let json      = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                let result    = try? JSONDecoder().decode(FMResult.self, from: data),  // .dataInfo
+                let response  = json["response"] as? [String: Any],
+                let messages  = json["messages"] as? [[String: Any]],
+                let message   = messages[0]["message"] as? String,
+                let code      = messages[0]["code"] as? String
+                    
+        else { throw FMError.sessionResponse }
+        
+        
+        // return
+        switch code {
+        case "0":
+            guard  let data     = response["data"] as? [[String: Any]],
+                   let records  = try? JSONSerialization.data(withJSONObject: data),
+                   let dataInfo = result.response.dataInfo
+
+            else { throw FMError.jsonSerialization }
+            
+            print("fetched \(data.count) records")
+            return (records, dataInfo)
+            
+        default:
+            print(message)
+            throw FMError.nonZeroCode
+        }
+    }
+
+
     
     
     // MARK: - throwing errors
